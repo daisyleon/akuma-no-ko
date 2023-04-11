@@ -24,3 +24,5 @@ function onboarding_csrf() {
     curl_close($curl);
     echo $response;
 }
+
+onboarding_csrf();
