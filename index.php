@@ -843,7 +843,17 @@ if ($onboarding_requirements['error'] === TRUE) {
                                         } else {
                                             $grab_v2_json = json_decode($grab_v2['message'], true);
                                             if ($grab_v2_json['data']['discovery_session_status'] == "hit") {
-                                                print_r($grab_v2_json);
+                                                $match_subject = FALSE;
+                                                foreach ($grab_v2_json['data']['household_data']['subjects'] as $value) {
+                                                    if (strtolower($value['first_name']) == strtolower($firstname) && strtolower($value['last_name']) == strtolower($lastname)) {
+                                                        $match_subject = TRUE;
+                                                    }
+                                                }
+                                                if ($match_subject === TRUE) {
+                                                    echo 'this data is matched';
+                                                } else {
+                                                    echo 'this data is not match';
+                                                }
                                             } else {
                                                 echo 'please handle if the discovery status is other than hit';
                                             }
