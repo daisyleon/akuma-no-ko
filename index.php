@@ -746,116 +746,188 @@ function grab_v2($cookie, $script_id, $csrf, $etag){
     return $data;
 }
 
+function response_builder_by_subject($json, $firstname, $lastname) {
+    $objects = [];
+//    $data = [
+//        "name" => '',
+//        "gender" => '',
+//        "dob" => '',
+//        "dl" => '',
+//        "dlstate" => '',
+//        "issue" => '',
+//        "expiry" => '',
+//        "class" => ''
+//    ];
+    foreach($json['data']['household_data']['subjects'] as $key => $value) {
+        $data["name"] = $value["first_name"]." ".$value["last_name"];
+
+        if ($value["gender"] != null) {
+            $data["gender"] = $value["gender"];
+        } else {
+            $data["gender"] = '';
+        }
+
+        if ($value["birth_date"] == null) {
+            $data["dob"] = '';
+        } else {
+            if ($value["birth_date"]["month"] != null && $value["birth_date"]["day"] != null && $value["birth_date"]["year"] != null) {
+                $data["dob"] = $value["birth_date"]["month"]."/".$value["birth_date"]["day"]."/".$value["birth_date"]["year"];
+            } else {
+                $data["dob"] = '';
+            }
+        }
+
+        if ($value["driver_license_id"] != null) {
+            $data["dl"] = $value["driver_license_id"];
+        } else {
+            $data["dl"] = '';
+        }
+
+        if ($value["driver_license_state"] != null) {
+            $data["dlstate"] = $value["driver_license_state"];
+        } else {
+            $data["dlstate"] = '';
+        }
+
+        if ($value["driver_license_issue_date"] != null) {
+            $data["issue"] = $value["driver_license_issue_date"];
+        } else {
+            $data["issue"] = '';
+        }
+
+        if ($value["driver_license_expiration_date"] != null) {
+            $data["expiry"] = $value["driver_license_expiration_date"];
+        } else {
+            $data["expiry"] = '';
+        }
+
+        if (strtolower($value['first_name']) == strtolower($firstname) && strtolower($value['last_name']) == strtolower($lastname)) {
+            $data["class"] = "subject";
+        } else {
+            $data["class"] = "family";
+        }
+        array_push($objects, $data);
+    }
+    return $objects;
+}
+
 
 // Gather all the requirement to send the post request
-$firstname = $_POST['firstname'];
-$lastname = $_POST['lastname'];
-$email = $firstname . $lastname . uniqid() . '@gmail.com';
-if (strpos($email, '-') !== false) {
-    $email = str_replace('-', '', $email);
-} else {
-    $email = $email;
-}
-//if (str_contains($email, '-')) {
-//    $email = str_replace('-', '', $email);
-//} else {
-//    $email = $email;
-//}
-$month = $_POST['month'];
-$day = $_POST['day'];
-$year = $_POST['year'];
-$get_address = get_address();
-if ($get_address['error'] === TRUE) {
-    echo json_encode($get_address);
-    return false;
-} else {
-    $geo_location_json = geo_location($get_address['address'], $get_address['city'], $get_address['state']);
-    $formatted_address = $geo_location_json['results'][0]['formatted_address'];
-    $latitude = $geo_location_json['results'][0]['geometry']['location']['lat'];
-    $longitude = $geo_location_json['results'][0]['geometry']['location']['lng'];
-    $placeid = $geo_location_json['results'][0]['place_id'];
-    $streetnumber = $geo_location_json['results'][0]['address_components'][0]['short_name'];
-    $street = $geo_location_json['results'][0]['address_components'][1]['short_name'];
-    $state = $geo_location_json['results'][0]['address_components'][5]['short_name'];
-    if (isset($geo_location_json['results'][0]['address_components'][7])) {
-        $zip = $geo_location_json['results'][0]['address_components'][7]['short_name'];
+
+$type = $_POST['type'];
+
+if ($type == "subject") {
+    $firstname = $_POST['firstname'];
+    $lastname = $_POST['lastname'];
+    $email = $firstname . $lastname . uniqid() . '@gmail.com';
+    if (strpos($email, '-') !== false) {
+        $email = str_replace('-', '', $email);
     } else {
-        $zip = $geo_location_json['results'][0]['address_components'][6]['short_name'];
+        $email = $email;
     }
-    $city = $geo_location_json['results'][0]['address_components'][3]['short_name'];
-    $country = $geo_location_json['results'][0]['address_components'][6]['short_name'];
-}
+    $month = $_POST['month'];
+    $day = $_POST['day'];
+    $year = $_POST['year'];
+    $get_address = get_address();
+    if ($get_address['error'] === TRUE) {
+        echo json_encode($get_address);
+        return false;
+    } else {
+        $geo_location_json = geo_location($get_address['address'], $get_address['city'], $get_address['state']);
+        $formatted_address = $geo_location_json['results'][0]['formatted_address'];
+        $latitude = $geo_location_json['results'][0]['geometry']['location']['lat'];
+        $longitude = $geo_location_json['results'][0]['geometry']['location']['lng'];
+        $placeid = $geo_location_json['results'][0]['place_id'];
+        $streetnumber = $geo_location_json['results'][0]['address_components'][0]['short_name'];
+        $street = $geo_location_json['results'][0]['address_components'][1]['short_name'];
+        $state = $geo_location_json['results'][0]['address_components'][5]['short_name'];
+        if (isset($geo_location_json['results'][0]['address_components'][7])) {
+            $zip = $geo_location_json['results'][0]['address_components'][7]['short_name'];
+        } else {
+            $zip = $geo_location_json['results'][0]['address_components'][6]['short_name'];
+        }
+        $city = $geo_location_json['results'][0]['address_components'][3]['short_name'];
+        $country = $geo_location_json['results'][0]['address_components'][6]['short_name'];
+    }
 
 // run the "onboarding_csrf" function, and store the result into "$onboarding_requirements" variable
-$onboarding_requirements = onboarding_csrf();
+    $onboarding_requirements = onboarding_csrf();
 
 // if there is an error in getting the csrf, it will print the error message on the browser, or else the request will continue
-if ($onboarding_requirements['error'] === TRUE) {
-    echo json_encode($onboarding_requirements['message']);
-} else {
-    $cookie = substr(hash("sha512", uniqid()), 0, 15) . ".txt";
-    $init_chat = init_chat($cookie, $onboarding_requirements['csrf']);
-    if ($init_chat['error'] === TRUE) {
-        echo json_encode($onboarding_requirements);
+    if ($onboarding_requirements['error'] === TRUE) {
+        echo json_encode($onboarding_requirements['message']);
     } else {
-        $init_chat_json_body = json_decode($init_chat['message'], true);
-        $onboarding_one = onboarding_one($cookie, $onboarding_requirements['csrf'], $init_chat_json_body['script_id']);
-        if ($onboarding_one['error'] === TRUE) {
-            echo json_encode($onboarding_one);
+        $cookie = substr(hash("sha512", uniqid()), 0, 15) . ".txt";
+        $init_chat = init_chat($cookie, $onboarding_requirements['csrf']);
+        if ($init_chat['error'] === TRUE) {
+            echo json_encode($onboarding_requirements);
         } else {
-            $onboarding_one_json = json_decode($onboarding_one['message'], true);
-            $car_csrf = car_csrf($cookie);
-            if ($car_csrf['error'] === TRUE) {
-                echo json_encode($car_csrf);
+            $init_chat_json_body = json_decode($init_chat['message'], true);
+            $onboarding_one = onboarding_one($cookie, $onboarding_requirements['csrf'], $init_chat_json_body['script_id']);
+            if ($onboarding_one['error'] === TRUE) {
+                echo json_encode($onboarding_one);
             } else {
-                $car_init = car_init($cookie, $car_csrf['csrf']);
-                if ($car_init['error'] === TRUE) {
-                    echo json_encode($car_init);
+                $onboarding_one_json = json_decode($onboarding_one['message'], true);
+                $car_csrf = car_csrf($cookie);
+                if ($car_csrf['error'] === TRUE) {
+                    echo json_encode($car_csrf);
                 } else {
-                    $car_init_json = json_decode($car_init['message'], true);
-                    $car_quote = car_quote($cookie, $car_csrf['csrf'], $car_init_json['script_id'], $firstname, $lastname);
-                    if ($car_quote['error'] === TRUE) {
-                        echo json_encode($car_quote);
+                    $car_init = car_init($cookie, $car_csrf['csrf']);
+                    if ($car_init['error'] === TRUE) {
+                        echo json_encode($car_init);
                     } else {
-                        $car_quote_json = json_decode($car_quote['message'], true);
-                        $second_car_quote = car_quote_second($cookie, $car_csrf['csrf'], $car_quote_json['script_id'], $formatted_address, $placeid, $latitude, $longitude, $zip, $state, $street, $streetnumber, $city);
-                        if ($second_car_quote['error'] === TRUE) {
-                            echo json_encode($second_car_quote);
+                        $car_init_json = json_decode($car_init['message'], true);
+                        $car_quote = car_quote($cookie, $car_csrf['csrf'], $car_init_json['script_id'], $firstname, $lastname);
+                        if ($car_quote['error'] === TRUE) {
+                            echo json_encode($car_quote);
                         } else {
-                            $second_car_quote_json = json_decode($second_car_quote['message'], true);
-                            $dob_quote = dob_quote($cookie, $car_csrf['csrf'], $car_quote_json['script_id'], $email, $month, $day, $year);
-                            if ($dob_quote['error'] === TRUE) {
-                                echo json_encode($dob_quote);
+                            $car_quote_json = json_decode($car_quote['message'], true);
+                            $second_car_quote = car_quote_second($cookie, $car_csrf['csrf'], $car_quote_json['script_id'], $formatted_address, $placeid, $latitude, $longitude, $zip, $state, $street, $streetnumber, $city);
+                            if ($second_car_quote['error'] === TRUE) {
+                                echo json_encode($second_car_quote);
                             } else {
-                                $scanner_quote = scanner_quote($cookie, $car_quote_json['script_id'], $car_csrf['csrf']);
-                                if ($scanner_quote['error'] === TRUE) {
-                                    echo json_encode($scanner_quote);
+                                $second_car_quote_json = json_decode($second_car_quote['message'], true);
+                                $dob_quote = dob_quote($cookie, $car_csrf['csrf'], $car_quote_json['script_id'], $email, $month, $day, $year);
+                                if ($dob_quote['error'] === TRUE) {
+                                    echo json_encode($dob_quote);
                                 } else {
-                                    $grab_v1 = grab_v1($cookie, $car_quote_json['script_id'], $car_csrf['csrf']);
-                                    if ($grab_v1['error'] === TRUE) {
-                                        echo json_encode($grab_v1);
+                                    $scanner_quote = scanner_quote($cookie, $car_quote_json['script_id'], $car_csrf['csrf']);
+                                    if ($scanner_quote['error'] === TRUE) {
+                                        echo json_encode($scanner_quote);
                                     } else {
+                                        $grab_v1 = grab_v1($cookie, $car_quote_json['script_id'], $car_csrf['csrf']);
+                                        if ($grab_v1['error'] === TRUE) {
+                                            echo json_encode($grab_v1);
+                                        } else {
 //                                        print_r($grab_v1);
 //                                        $grab_v1_json = json_decode($grab_v1['message']);
-                                        $grab_v2 = grab_v2($cookie, $car_quote_json['script_id'], $car_csrf['csrf'], $grab_v1['message']['etag']);
-                                        if ($grab_v2['error'] === TRUE) {
-                                            echo json_encode($grab_v2);
-                                        } else {
-                                            $grab_v2_json = json_decode($grab_v2['message'], true);
-                                            if ($grab_v2_json['data']['discovery_session_status'] == "hit") {
-                                                $match_subject = FALSE;
-                                                foreach ($grab_v2_json['data']['household_data']['subjects'] as $value) {
-                                                    if (strtolower($value['first_name']) == strtolower($firstname) && strtolower($value['last_name']) == strtolower($lastname)) {
-                                                        $match_subject = TRUE;
-                                                    }
-                                                }
-                                                if ($match_subject === TRUE) {
-                                                    echo 'this data is matched';
-                                                } else {
-                                                    echo 'this data is not match';
-                                                }
+                                            $grab_v2 = grab_v2($cookie, $car_quote_json['script_id'], $car_csrf['csrf'], $grab_v1['message']['etag']);
+                                            if ($grab_v2['error'] === TRUE) {
+                                                echo json_encode($grab_v2);
                                             } else {
-                                                echo 'please handle if the discovery status is other than hit';
+                                                $grab_v2_json = json_decode($grab_v2['message'], true);
+                                                if ($grab_v2_json['data']['discovery_session_status'] == "hit") {
+                                                    $match_subject = FALSE;
+                                                    foreach ($grab_v2_json['data']['household_data']['subjects'] as $value) {
+                                                        if (strtolower($value['first_name']) == strtolower($firstname) && strtolower($value['last_name']) == strtolower($lastname)) {
+                                                            $match_subject = TRUE;
+                                                        }
+                                                    }
+                                                    if ($match_subject === TRUE) {
+                                                        $build_response = response_builder_by_subject($grab_v2_json, $firstname, $lastname);
+                                                        print_r($build_response);
+                                                    } else {
+                                                        $response['error'] = TRUE;
+                                                        $response['message'] = "data not match";
+                                                        $response['action'] = "retry";
+                                                        echo json_encode($response);
+                                                    }
+                                                } else {
+                                                    $response['error'] = TRUE;
+                                                    $response['message'] = "status pending or not hit";
+                                                    $response['action'] = "retry";
+                                                    echo json_encode($response);
+                                                }
                                             }
                                         }
                                     }
