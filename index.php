@@ -47,23 +47,18 @@ function connect_db()
     if (mysqli_connect_errno()) {
         die("Connection failed: " . mysqli_connect_error());
     } else {
-        // Assuming $conn variable holds the database connection object
-        $query = "CREATE TABLE address (
-              id INT(11) NOT NULL AUTO_INCREMENT,
-              address VARCHAR(255) DEFAULT NULL,
-              is_used TINYINT(1) DEFAULT NULL,
-              PRIMARY KEY (id)
-          )";
-
-    // Execute the query
-        if ($conn->query($query) === TRUE) {
-            echo "Table address created successfully";
+        $sql = "SELECT id, address, is_used FROM address";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            // output data of each row
+            while($row = $result->fetch_assoc()) {
+                echo "ID: " . $row["id"]. " - Address: " . $row["address"]. " - Is Used: " . $row["is_used"]. "<br>";
+            }
         } else {
-            echo "Error creating table: " . $conn->error;
+            echo "0 results";
         }
     }
-
-    // Connection successful, continue with your queries here
+    $conn->close();
 }
 
 // This "onboarding_csrf" function is working to get the csrf token to be used in the next request
