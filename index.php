@@ -751,11 +751,16 @@ function grab_v2($cookie, $script_id, $csrf, $etag){
 $firstname = $_POST['firstname'];
 $lastname = $_POST['lastname'];
 $email = $firstname . $lastname . uniqid() . '@gmail.com';
-if (str_contains($email, '-')) {
+if (strpos($email, '-') !== false) {
     $email = str_replace('-', '', $email);
 } else {
     $email = $email;
 }
+//if (str_contains($email, '-')) {
+//    $email = str_replace('-', '', $email);
+//} else {
+//    $email = $email;
+//}
 $month = $_POST['month'];
 $day = $_POST['day'];
 $year = $_POST['year'];
