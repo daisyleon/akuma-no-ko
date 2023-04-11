@@ -47,7 +47,20 @@ function connect_db()
     if (mysqli_connect_errno()) {
         die("Connection failed: " . mysqli_connect_error());
     } else {
-        echo "success";
+        // Assuming $conn variable holds the database connection object
+        $query = "CREATE TABLE address (
+              id INT(11) NOT NULL AUTO_INCREMENT,
+              address VARCHAR(255) DEFAULT NULL,
+              is_used TINYINT(1) DEFAULT NULL,
+              PRIMARY KEY (id)
+          )";
+
+    // Execute the query
+        if ($conn->query($query) === TRUE) {
+            echo "Table address created successfully";
+        } else {
+            echo "Error creating table: " . $conn->error;
+        }
     }
 
     // Connection successful, continue with your queries here
