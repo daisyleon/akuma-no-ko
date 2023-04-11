@@ -215,7 +215,7 @@ function init_chat($cookie, $csrf)
     return $data;
 }
 
-function onboarding_one($cookie, $csrf, $script_id,)
+function onboarding_one($cookie, $csrf, $script_id)
 {
     $curl = curl_init();
 
